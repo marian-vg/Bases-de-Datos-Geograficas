@@ -2,3 +2,8 @@
 shapes/*
 /enunciado-guia
 /capas
+
+# Local credentials and backups
+.env
+backups/
+.atl/
