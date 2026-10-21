@@ -1,2 +1,7 @@
 # Ignorar las capas
 shapes/*
+
+# Local credentials and backups
+.env
+backups/
+.atl/

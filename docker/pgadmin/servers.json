@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "TP Bases Geograficas",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "bdg_entrerios",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
