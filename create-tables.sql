@@ -1,110 +1,28 @@
---
--- PostgreSQL database dump
---
+-- ============================================================================
+-- TRABAJO PRÁCTICO N° 2: BASES DE DATOS GEOGRÁFICAS
+-- Creación del Modelo de Datos Espacial (Esquema entrerios)
+-- Base de datos: bdg_entrerios | PostgreSQL con extensión PostGIS
+-- ============================================================================
 
-\restrict VJsHDDDlaAfpBHTqmwFD2zGH3feFCPwHC77h3jlC7ay9zkSQqNTmUAqN4y8aYN1
+-- Aseguramos la existencia de PostGIS y el esquema de trabajo
+CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE SCHEMA IF NOT EXISTS entrerios;
+SET search_path TO entrerios, public;
 
--- Dumped from database version 18.1
--- Dumped by pg_dump version 18.0
+-- ============================================================================
+-- 1. SECUENCIAS
+-- ============================================================================
+CREATE SEQUENCE IF NOT EXISTS entrerios.departamentos_id_seq AS integer START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS entrerios.suelo_id_seq AS integer START WITH 1 INCREMENT BY 1;
 
--- Started on 2026-10-06 02:07:37
-
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
---
--- TOC entry 24 (class 2615 OID 67638)
--- Name: entrerios; Type: SCHEMA; Schema: -; Owner: postgres
---
-
-CREATE SCHEMA entrerios;
-
-
-ALTER SCHEMA entrerios OWNER TO postgres;
-
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
---
--- TOC entry 356 (class 1259 OID 68093)
--- Name: calles; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.calles (
-    id character varying NOT NULL,
-    geom public.geometry(LineString,4326),
-    "@id" character varying,
-    access character varying,
-    admin_level character varying,
-    alt_name character varying,
-    bicycle character varying,
-    boundary character varying,
-    bridge character varying,
-    "check_date:surface" date,
-    covered character varying,
-    cycleway character varying,
-    "cycleway:left" character varying,
-    "cycleway:right" character varying,
-    description character varying,
-    email character varying,
-    embankment character varying,
-    fixme character varying,
-    foot character varying,
-    highway character varying,
-    horse character varying,
-    incline character varying,
-    junction character varying,
-    lane_markings character varying,
-    lanes character varying,
-    layer character varying,
-    lit character varying,
-    loc_name character varying,
-    locked character varying,
-    man_made character varying,
-    maxheight character varying,
-    maxspeed character varying,
-    "maxspeed:type" character varying,
-    name character varying,
-    noname character varying,
-    note character varying,
-    official_name character varying,
-    old_name character varying,
-    old_ref character varying,
-    oneway character varying,
-    "parking:both:fee:conditional" character varying,
-    "parking:lane:both" character varying,
-    ref character varying,
-    short_name character varying,
-    sidewalk character varying,
-    smoothness character varying,
-    sorting_name character varying,
-    source character varying,
-    "source:surface" character varying,
-    surface character varying,
-    width character varying
-);
-
-
-ALTER TABLE entrerios.calles OWNER TO postgres;
-
---
--- TOC entry 351 (class 1259 OID 67699)
--- Name: departamentos; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.departamentos (
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.departamentos
+-- Descripción: Límites político-administrativos departamentales del IGN
+-- Geometría: MultiPolygon (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.departamentos (
     id integer NOT NULL,
-    geom public.geometry(MultiPolygon,4326),
+    geom geometry(MultiPolygon,4326),
     fid bigint,
     gid integer,
     objeto character varying(254),
@@ -116,126 +34,22 @@ CREATE TABLE entrerios.departamentos (
     sag character varying(254)
 );
 
+-- Clave primaria e índices espaciales para departamentos
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'departamentos_pkey') THEN
+        ALTER TABLE entrerios.departamentos ADD CONSTRAINT departamentos_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_departamentos_geom ON entrerios.departamentos USING gist (geom);
 
-ALTER TABLE entrerios.departamentos OWNER TO postgres;
-
---
--- TOC entry 350 (class 1259 OID 67698)
--- Name: departamentos_id_seq; Type: SEQUENCE; Schema: entrerios; Owner: postgres
---
-
-CREATE SEQUENCE entrerios.departamentos_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE entrerios.departamentos_id_seq OWNER TO postgres;
-
---
--- TOC entry 15159 (class 0 OID 0)
--- Dependencies: 350
--- Name: departamentos_id_seq; Type: SEQUENCE OWNED BY; Schema: entrerios; Owner: postgres
---
-
-ALTER SEQUENCE entrerios.departamentos_id_seq OWNED BY entrerios.departamentos.id;
-
-
---
--- TOC entry 354 (class 1259 OID 67984)
--- Name: lagunas; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.lagunas (
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.localidades
+-- Descripción: Poblaciones, ciudades, pueblos y comunas (OpenStreetMap)
+-- Geometría: Point (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.localidades (
     id character varying NOT NULL,
-    geom public.geometry(MultiPolygon,4326),
-    "@id" character varying,
-    access character varying,
-    "addr:city" character varying,
-    "addr:postcode" character varying,
-    "addr:street" character varying,
-    alt_name character varying,
-    "alt_name:cs" character varying,
-    basin character varying,
-    boat character varying,
-    canoe character varying,
-    check_date date,
-    description character varying,
-    destination character varying,
-    fixme character varying,
-    golf character varying,
-    intermittent character varying,
-    landuse character varying,
-    leisure character varying,
-    length character varying,
-    lit character varying,
-    location character varying,
-    man_made character varying,
-    name character varying,
-    "name:af" character varying,
-    "name:ar" character varying,
-    "name:ca" character varying,
-    "name:cs" character varying,
-    "name:de" character varying,
-    "name:el" character varying,
-    "name:en" character varying,
-    "name:eo" character varying,
-    "name:es" character varying,
-    "name:fa" character varying,
-    "name:fr" character varying,
-    "name:he" character varying,
-    "name:hi" character varying,
-    "name:hu" character varying,
-    "name:it" character varying,
-    "name:ja" character varying,
-    "name:ko" character varying,
-    "name:nl" character varying,
-    "name:pa" character varying,
-    "name:pt" character varying,
-    "name:ru" character varying,
-    "name:uk" character varying,
-    "name:zh" character varying,
-    "natural" character varying,
-    note character varying,
-    official_name character varying,
-    operator character varying,
-    place character varying,
-    reservoir_type character varying,
-    salt character varying,
-    "seamark:harbour:category" character varying,
-    "seamark:type" character varying,
-    ship character varying,
-    "short_name:cs" character varying,
-    "short_name:hu" character varying,
-    source character varying,
-    "source:position" character varying,
-    "source:tracer" character varying,
-    "source:zoomlevel" character varying,
-    swimming_pool character varying,
-    tidal character varying,
-    type character varying,
-    water character varying,
-    "@relations" json,
-    wetland character varying,
-    wikidata character varying,
-    wikimedia_commons character varying,
-    wikipedia character varying
-);
-
-
-ALTER TABLE entrerios.lagunas OWNER TO postgres;
-
---
--- TOC entry 349 (class 1259 OID 67688)
--- Name: localidades; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.localidades (
-    id character varying NOT NULL,
-    geom public.geometry(Point,4326),
+    geom geometry(Point,4326),
     "@id" character varying,
     "addr:postcode" character varying,
     alt_name character varying,
@@ -351,17 +165,92 @@ CREATE TABLE entrerios.localidades (
     wikipedia character varying
 );
 
+-- Clave primaria e índices espaciales para localidades
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'localidades_pkey') THEN
+        ALTER TABLE entrerios.localidades ADD CONSTRAINT localidades_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_localidades_geom ON entrerios.localidades USING gist (geom);
 
-ALTER TABLE entrerios.localidades OWNER TO postgres;
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.salud
+-- Descripción: Infraestructura sanitaria: hospitales, clínicas y CAPS (OpenStreetMap)
+-- Geometría: Point (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.salud (
+    id character varying CONSTRAINT hospitales_id_not_null NOT NULL,
+    geom geometry(Point,4326),
+    "@id" character varying,
+    "addr:city" character varying,
+    "addr:country" character varying,
+    "addr:full" character varying,
+    "addr:housenumber" character varying,
+    "addr:postcode" character varying,
+    "addr:street" character varying,
+    aeroway character varying,
+    alt_name character varying,
+    amenity character varying,
+    beds character varying,
+    building character varying,
+    "building:levels" character varying,
+    "building:material" character varying,
+    check_date date,
+    "contact:email" character varying,
+    "contact:facebook" character varying,
+    "contact:instagram" character varying,
+    "contact:phone" character varying,
+    "contact:website" character varying,
+    "contact:whatsapp" character varying,
+    cuisine character varying,
+    description character varying,
+    door character varying,
+    email character varying,
+    emergency character varying,
+    fax character varying,
+    fixme character varying,
+    healthcare character varying,
+    "healthcare:speciality" character varying,
+    name character varying,
+    "name:de" character varying,
+    "name:en" character varying,
+    "name:es" character varying,
+    "name:fr" character varying,
+    "name:pt" character varying,
+    official_name character varying,
+    opening_hours character varying,
+    operator character varying,
+    "operator:type" character varying,
+    "operator:wikidata" character varying,
+    "operator:wikipedia" character varying,
+    phone character varying,
+    "ref:sisa_codigo" character varying,
+    "ref:sisa_tipologia" character varying,
+    "roof:shape" character varying,
+    short_name character varying,
+    source character varying,
+    website character varying,
+    wheelchair character varying,
+    wikidata character varying,
+    "@geometry" character varying
+);
 
---
--- TOC entry 353 (class 1259 OID 67760)
--- Name: rios; Type: TABLE; Schema: entrerios; Owner: postgres
---
+-- Clave primaria e índices espaciales para salud
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'hospitales_pkey') THEN
+        ALTER TABLE entrerios.salud ADD CONSTRAINT hospitales_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_salud_geom ON entrerios.salud USING gist (geom);
 
-CREATE TABLE entrerios.rios (
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.rios
+-- Descripción: Red hidrográfica: ríos, arroyos y cursos de agua (OpenStreetMap)
+-- Geometría: LineString (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.rios (
     id character varying NOT NULL,
-    geom public.geometry(LineString,4326),
+    geom geometry(LineString,4326),
     "@id" character varying,
     "addr:city" character varying,
     "addr:postcode" character varying,
@@ -400,17 +289,111 @@ CREATE TABLE entrerios.rios (
     wikipedia character varying
 );
 
+-- Clave primaria e índices espaciales para rios
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'rios_pkey') THEN
+        ALTER TABLE entrerios.rios ADD CONSTRAINT rios_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_rios_geom ON entrerios.rios USING gist (geom);
 
-ALTER TABLE entrerios.rios OWNER TO postgres;
-
---
--- TOC entry 352 (class 1259 OID 67747)
--- Name: rutas; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.rutas (
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.lagunas
+-- Descripción: Cuerpos de agua superficiales: lagunas, lagos y embalses (OpenStreetMap)
+-- Geometría: MultiPolygon (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.lagunas (
     id character varying NOT NULL,
-    geom public.geometry(LineString,4326),
+    geom geometry(MultiPolygon,4326),
+    "@id" character varying,
+    access character varying,
+    "addr:city" character varying,
+    "addr:postcode" character varying,
+    "addr:street" character varying,
+    alt_name character varying,
+    "alt_name:cs" character varying,
+    basin character varying,
+    boat character varying,
+    canoe character varying,
+    check_date date,
+    description character varying,
+    destination character varying,
+    fixme character varying,
+    golf character varying,
+    intermittent character varying,
+    landuse character varying,
+    leisure character varying,
+    length character varying,
+    lit character varying,
+    location character varying,
+    man_made character varying,
+    name character varying,
+    "name:af" character varying,
+    "name:ar" character varying,
+    "name:ca" character varying,
+    "name:cs" character varying,
+    "name:de" character varying,
+    "name:el" character varying,
+    "name:en" character varying,
+    "name:eo" character varying,
+    "name:es" character varying,
+    "name:fa" character varying,
+    "name:fr" character varying,
+    "name:he" character varying,
+    "name:hi" character varying,
+    "name:hu" character varying,
+    "name:it" character varying,
+    "name:ja" character varying,
+    "name:ko" character varying,
+    "name:nl" character varying,
+    "name:pa" character varying,
+    "name:pt" character varying,
+    "name:ru" character varying,
+    "name:uk" character varying,
+    "name:zh" character varying,
+    "natural" character varying,
+    note character varying,
+    official_name character varying,
+    operator character varying,
+    place character varying,
+    reservoir_type character varying,
+    salt character varying,
+    "seamark:harbour:category" character varying,
+    "seamark:type" character varying,
+    ship character varying,
+    "short_name:cs" character varying,
+    "short_name:hu" character varying,
+    source character varying,
+    "source:position" character varying,
+    "source:tracer" character varying,
+    "source:zoomlevel" character varying,
+    swimming_pool character varying,
+    tidal character varying,
+    type character varying,
+    water character varying,
+    "@relations" json,
+    wetland character varying,
+    wikidata character varying,
+    wikimedia_commons character varying,
+    wikipedia character varying
+);
+
+-- Clave primaria e índices espaciales para lagunas
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'lagunas_pkey') THEN
+        ALTER TABLE entrerios.lagunas ADD CONSTRAINT lagunas_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_lagunas_geom ON entrerios.lagunas USING gist (geom);
+
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.rutas
+-- Descripción: Red vial principal: autopistas, autovías, rutas nacionales y provinciales (OpenStreetMap)
+-- Geometría: LineString (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.rutas (
+    id character varying NOT NULL,
+    geom geometry(LineString,4326),
     "@id" character varying,
     access character varying,
     admin_level character varying,
@@ -523,82 +506,89 @@ CREATE TABLE entrerios.rutas (
     wikipedia character varying
 );
 
+-- Clave primaria e índices espaciales para rutas
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'rutas_pkey') THEN
+        ALTER TABLE entrerios.rutas ADD CONSTRAINT rutas_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_rutas_geom ON entrerios.rutas USING gist (geom);
 
-ALTER TABLE entrerios.rutas OWNER TO postgres;
-
---
--- TOC entry 355 (class 1259 OID 68082)
--- Name: salud; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.salud (
-    id character varying CONSTRAINT hospitales_id_not_null NOT NULL,
-    geom public.geometry(Point,4326),
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.calles
+-- Descripción: Red vial urbana y secundaria (OpenStreetMap)
+-- Geometría: LineString (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.calles (
+    id character varying NOT NULL,
+    geom geometry(LineString,4326),
     "@id" character varying,
-    "addr:city" character varying,
-    "addr:country" character varying,
-    "addr:full" character varying,
-    "addr:housenumber" character varying,
-    "addr:postcode" character varying,
-    "addr:street" character varying,
-    aeroway character varying,
+    access character varying,
+    admin_level character varying,
     alt_name character varying,
-    amenity character varying,
-    beds character varying,
-    building character varying,
-    "building:levels" character varying,
-    "building:material" character varying,
-    check_date date,
-    "contact:email" character varying,
-    "contact:facebook" character varying,
-    "contact:instagram" character varying,
-    "contact:phone" character varying,
-    "contact:website" character varying,
-    "contact:whatsapp" character varying,
-    cuisine character varying,
+    bicycle character varying,
+    boundary character varying,
+    bridge character varying,
+    "check_date:surface" date,
+    covered character varying,
+    cycleway character varying,
+    "cycleway:left" character varying,
+    "cycleway:right" character varying,
     description character varying,
-    door character varying,
     email character varying,
-    emergency character varying,
-    fax character varying,
+    embankment character varying,
     fixme character varying,
-    healthcare character varying,
-    "healthcare:speciality" character varying,
+    foot character varying,
+    highway character varying,
+    horse character varying,
+    incline character varying,
+    junction character varying,
+    lane_markings character varying,
+    lanes character varying,
+    layer character varying,
+    lit character varying,
+    loc_name character varying,
+    locked character varying,
+    man_made character varying,
+    maxheight character varying,
+    maxspeed character varying,
+    "maxspeed:type" character varying,
     name character varying,
-    "name:de" character varying,
-    "name:en" character varying,
-    "name:es" character varying,
-    "name:fr" character varying,
-    "name:pt" character varying,
+    noname character varying,
+    note character varying,
     official_name character varying,
-    opening_hours character varying,
-    operator character varying,
-    "operator:type" character varying,
-    "operator:wikidata" character varying,
-    "operator:wikipedia" character varying,
-    phone character varying,
-    "ref:sisa_codigo" character varying,
-    "ref:sisa_tipologia" character varying,
-    "roof:shape" character varying,
+    old_name character varying,
+    old_ref character varying,
+    oneway character varying,
+    "parking:both:fee:conditional" character varying,
+    "parking:lane:both" character varying,
+    ref character varying,
     short_name character varying,
+    sidewalk character varying,
+    smoothness character varying,
+    sorting_name character varying,
     source character varying,
-    website character varying,
-    wheelchair character varying,
-    wikidata character varying,
-    "@geometry" character varying
+    "source:surface" character varying,
+    surface character varying,
+    width character varying
 );
 
+-- Clave primaria e índices espaciales para calles
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'calles_pkey') THEN
+        ALTER TABLE entrerios.calles ADD CONSTRAINT calles_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_calles_geom ON entrerios.calles USING gist (geom);
 
-ALTER TABLE entrerios.salud OWNER TO postgres;
-
---
--- TOC entry 358 (class 1259 OID 68116)
--- Name: suelo; Type: TABLE; Schema: entrerios; Owner: postgres
---
-
-CREATE TABLE entrerios.suelo (
+-- ----------------------------------------------------------------------------
+-- Tabla: entrerios.suelo
+-- Descripción: Aptitud y cobertura de uso del suelo (INTA)
+-- Geometría: MultiPolygon (EPSG:4326)
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS entrerios.suelo (
     id integer NOT NULL,
-    geom public.geometry(MultiPolygon,4326),
+    geom geometry(MultiPolygon,4326),
     ogc_fid integer,
     layer character varying,
     map_name character varying,
@@ -669,199 +659,11 @@ CREATE TABLE entrerios.suelo (
     uso_suelo character varying(20)
 );
 
-
-ALTER TABLE entrerios.suelo OWNER TO postgres;
-
---
--- TOC entry 357 (class 1259 OID 68115)
--- Name: suelo_id_seq; Type: SEQUENCE; Schema: entrerios; Owner: postgres
---
-
-CREATE SEQUENCE entrerios.suelo_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE entrerios.suelo_id_seq OWNER TO postgres;
-
---
--- TOC entry 15160 (class 0 OID 0)
--- Dependencies: 357
--- Name: suelo_id_seq; Type: SEQUENCE OWNED BY; Schema: entrerios; Owner: postgres
---
-
-ALTER SEQUENCE entrerios.suelo_id_seq OWNED BY entrerios.suelo.id;
-
-
---
--- TOC entry 14972 (class 2604 OID 67702)
--- Name: departamentos id; Type: DEFAULT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.departamentos ALTER COLUMN id SET DEFAULT nextval('entrerios.departamentos_id_seq'::regclass);
-
-
---
--- TOC entry 14973 (class 2604 OID 68119)
--- Name: suelo id; Type: DEFAULT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.suelo ALTER COLUMN id SET DEFAULT nextval('entrerios.suelo_id_seq'::regclass);
-
-
---
--- TOC entry 14993 (class 2606 OID 68100)
--- Name: calles calles_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.calles
-    ADD CONSTRAINT calles_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14978 (class 2606 OID 67705)
--- Name: departamentos departamentos_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.departamentos
-    ADD CONSTRAINT departamentos_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14990 (class 2606 OID 68089)
--- Name: salud hospitales_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.salud
-    ADD CONSTRAINT hospitales_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14988 (class 2606 OID 67991)
--- Name: lagunas lagunas_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.lagunas
-    ADD CONSTRAINT lagunas_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14976 (class 2606 OID 67695)
--- Name: localidades localidades_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.localidades
-    ADD CONSTRAINT localidades_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14985 (class 2606 OID 67767)
--- Name: rios rios_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.rios
-    ADD CONSTRAINT rios_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14982 (class 2606 OID 67754)
--- Name: rutas rutas_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.rutas
-    ADD CONSTRAINT rutas_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14998 (class 2606 OID 68122)
--- Name: suelo suelo_pkey; Type: CONSTRAINT; Schema: entrerios; Owner: postgres
---
-
-ALTER TABLE ONLY entrerios.suelo
-    ADD CONSTRAINT suelo_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 14994 (class 1259 OID 68113)
--- Name: idx_calles_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_calles_geom ON entrerios.calles USING gist (geom);
-
-
---
--- TOC entry 14979 (class 1259 OID 68108)
--- Name: idx_departamentos_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_departamentos_geom ON entrerios.departamentos USING gist (geom);
-
-
---
--- TOC entry 14986 (class 1259 OID 68112)
--- Name: idx_lagunas_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_lagunas_geom ON entrerios.lagunas USING gist (geom);
-
-
---
--- TOC entry 14974 (class 1259 OID 68109)
--- Name: idx_localidades_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_localidades_geom ON entrerios.localidades USING gist (geom);
-
-
---
--- TOC entry 14983 (class 1259 OID 68111)
--- Name: idx_rios_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_rios_geom ON entrerios.rios USING gist (geom);
-
-
---
--- TOC entry 14980 (class 1259 OID 68110)
--- Name: idx_rutas_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_rutas_geom ON entrerios.rutas USING gist (geom);
-
-
---
--- TOC entry 14991 (class 1259 OID 68114)
--- Name: idx_salud_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_salud_geom ON entrerios.salud USING gist (geom);
-
-
---
--- TOC entry 14995 (class 1259 OID 86844)
--- Name: idx_suelo_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX idx_suelo_geom ON entrerios.suelo USING gist (geom);
-
-
---
--- TOC entry 14996 (class 1259 OID 86792)
--- Name: sidx_suelo_geom; Type: INDEX; Schema: entrerios; Owner: postgres
---
-
-CREATE INDEX sidx_suelo_geom ON entrerios.suelo USING gist (geom);
-
-
--- Completed on 2026-10-06 02:07:37
-
---
--- PostgreSQL database dump complete
---
-
-\unrestrict VJsHDDDlaAfpBHTqmwFD2zGH3feFCPwHC77h3jlC7ay9zkSQqNTmUAqN4y8aYN1
-
+-- Clave primaria e índices espaciales para suelo
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'suelo_pkey') THEN
+        ALTER TABLE entrerios.suelo ADD CONSTRAINT suelo_pkey PRIMARY KEY (id);
+    END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_suelo_geom ON entrerios.suelo USING gist (geom);
+CREATE INDEX IF NOT EXISTS sidx_suelo_geom ON entrerios.suelo USING gist (geom);
