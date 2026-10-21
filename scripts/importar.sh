@@ -14,7 +14,7 @@ import_layer() {
   fi
   docker compose run --rm -T gdal ogr2ogr -f PostgreSQL \
     'PG:host=postgres dbname=bdg_entrerios user=postgres' \
-    "/data/$file" -nln "$table" -lco SCHEMA=fuentes \
+    "/data/$file" -nln "fuentes.$table" \
     -lco GEOMETRY_NAME=geom -lco FID=fid -nlt GEOMETRY -t_srs EPSG:4326
 }
 import_layer departamentos concordia_shape.gpkg
