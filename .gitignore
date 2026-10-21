@@ -1,2 +1,4 @@
 # Ignorar las capas
 shapes/*
+/enunciado-guia
+/capas
