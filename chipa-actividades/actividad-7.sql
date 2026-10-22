@@ -1,12 +1,14 @@
 -- Actividad 7. Hidrografía de Concordia.
 
--- 7.1. ST_Touches exige que los departamentos se toquen sin superponer sus
+-- 7.1. Asumiendo que 'Limite' significa que compartan frontera,  
+-- ST_Touches exige que los departamentos se toquen sin superponer sus
 -- interiores. Los límites de Concordia tienen pequeños solapes con Federación,
 -- Federal y Colón: por eso se descartan y solo aparece San Salvador.
--- No significa que sea su único vecino: el resultado está incompleto por la
+-- No es su único vecino pero el resultado está incompleto por la
 -- calidad de los límites. No cambiamos a ST_Intersects sin más, porque también
 -- aceptaría solapes o contactos en un solo punto.
 -- Además, exigimos dimensión 1 (línea), no dimensión 0 (solo un punto).
+
 SELECT vecino.fid AS id,
        vecino.nam AS nombre,
 	   vecino.geom as geom,
@@ -18,7 +20,7 @@ JOIN capas.departamentos AS vecino
 WHERE elegido.nam = 'Concordia'
   AND ST_Dimension(ST_Intersection(elegido.geom, vecino.geom)) = 1;
 
--- 7.1. Esta consulta muestra los departamentos que se
+-- 7.1.b. Esta consulta muestra los departamentos que se
 -- superponen con Concordia y cuánto se superponen, en m². No arregla los datos
 -- ni presenta esos solapes como si fueran una frontera compartida.
 SELECT vecino.fid AS id, vecino.nam AS departamento_candidato, vecino.geom AS geo,
@@ -32,11 +34,12 @@ ORDER BY departamento_candidato;
 
 -- 7.2. Elegimos San Salvador, que sí cumple la condición anterior, y obtenemos
 -- la línea compartida con Concordia. Mide 74725,22 m; geom permite verla en QGIS.
+-- Usamos un cast a geography para realizar la medicion del cálculo basados en el elipsoide terrestre. 
 WITH departamentos_elegidos AS (
     SELECT elegido.fid AS id, vecino.nam AS departamento_vecino,
-           ST_CollectionExtract(
+           ST_CollectionExtract(	-- Usamos collectionExtract porque a veces la interseccion puede ser de distintos tipos, con el parámetro 2 pedimos un LineString.
                ST_Intersection(elegido.geom, vecino.geom), 2
-           ) AS geom
+           ) AS geom										
     FROM capas.departamentos AS elegido
     JOIN capas.departamentos AS vecino
       ON ST_Touches(elegido.geom, vecino.geom)
@@ -59,8 +62,7 @@ WITH cantidades AS (
     GROUP BY d.fid, d.nam
 )
 SELECT rank() OVER (ORDER BY cuerpos_de_agua DESC) AS puesto_provisional,
-       id, nombre, cuerpos_de_agua,
-       '17 departamentos; cobertura y calidad del agua OSM no verificadas' AS alcance
+       id, nombre, cuerpos_de_agua
 FROM cantidades
 ORDER BY puesto_provisional, nombre;
 
@@ -92,10 +94,13 @@ SELECT id, nombre,
        geom
 FROM superficies;
 
--- 7.5. Recortamos los ríos y arroyos a Concordia y medimos sus tramos en metros.
+-- 7.5. Recortamos los ríos y arroyos a Concordia y agrupamos los tramos por el
+-- nombre escrito en el archivo (Tabla 3 del informe). Un mismo río puede
+-- aparecer con nombres distintos o sin nombre.
 -- ST_CollectionExtract conserva las líneas: tocar el límite en un solo punto
--- no suma longitud. Cada fila es un tramo del archivo, no necesariamente todo
--- un río. Tomamos river/stream (ríos/arroyos), no canales.
+-- no suma longitud. Tomamos river/stream (ríos/arroyos), no canales.
+-- ST_Collect junta los tramos de cada nombre y ST_CollectionExtract los deja
+-- como un único tipo de línea, para poder verlos en QGIS.
 WITH recortes AS (
     SELECT r.fid AS id, coalesce(r.name, '(sin nombre)') AS nombre,
            ST_CollectionExtract(ST_Intersection(r.geom, d.geom), 2) AS geom
@@ -104,11 +109,13 @@ WITH recortes AS (
     WHERE d.nam = 'Concordia'
       AND r.waterway IN ('river', 'stream')
 )
-SELECT id, nombre,
-       ST_Length(geom::geography) AS longitud_m,
-       geom
+SELECT min(id) AS id, nombre, count(*) AS tramos,
+       round(sum(ST_Length(geom::geography))::numeric, 2) AS longitud_m,
+       ST_CollectionExtract(ST_Collect(geom), 2) AS geom
 FROM recortes
-WHERE NOT ST_IsEmpty(geom);
+WHERE NOT ST_IsEmpty(geom)
+GROUP BY nombre
+ORDER BY longitud_m DESC;
 
 -- 7.5. Sumamos los tramos: 119 en total, con una longitud de 552998,75 m.
 -- Repetimos el recorte para que esta consulta también pueda ejecutarse sola.
@@ -123,7 +130,3 @@ SELECT count(*) AS tramos,
        round(sum(ST_Length(geom::geography))::numeric, 2) AS longitud_total_m
 FROM recortes
 WHERE NOT ST_IsEmpty(geom);
-
--- QGIS: cargar una consulta con id y geom desde DB Manager para verla en el mapa.
--- concordia.qgz usa vistas de una entrega anterior: ejecutar estas consultas
--- no las actualiza. Para ver este resultado, cargar la consulta directamente.
