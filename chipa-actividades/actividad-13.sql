@@ -1,131 +1,138 @@
--- Actividad 13. Plan de derivación sanitaria por cierre preventivo durante
--- una emergencia hídrica en Concordia.
---
--- Problema: si los hospitales y clínicas a 2 km o menos del agua se consideran
--- temporalmente no disponibles, ¿qué centros fuera de esa franja recibirían
--- sus derivaciones y cuántos centros dependerían de cada receptor?
--- Capas: departamento (IGN), salud, ríos/arroyos y cuerpos de agua (OSM).
+-- Actividad 13. ¿A qué centros derivar si algunos deben cerrar por una crecida?
+-- Suponemos que los hospitales y clínicas a 2 km o menos del agua no están
+-- disponibles. Buscamos un centro de destino fuera de esa franja, en Concordia,
+-- y contamos cuántos centros dependerían de cada destino.
+-- Datos: departamentos y ríos del profesor (capas), más salud y lagunas de los
+-- archivos OSM anteriores (entrerios). Son al menos tres tipos de información.
 -- Preparación: ./chipa-actividades/importar-capas-profe.sh
--- Límites y ríos/arroyos: fuentes_profe (IGN/OSM entregados por el profesor).
--- Salud y lagunas: exports OSM anteriores en entrerios; no hay una nueva capa
--- sanitaria entre las del profesor. Hay 14 ciudades entregadas dentro de
--- Concordia, pero no son necesarias para esta pregunta institucional.
 --
--- Supuestos: franja ACADÉMICA de 2 km, no inundación observada ni mapa oficial.
--- Se usan cursos/cuerpos que intersectan Concordia, conservando su geometría
--- completa para no cortar artificialmente la cercanía en el borde.
--- Los receptores deben estar en Concordia y a más de 2 km de esas fuentes.
--- Distancia geodésica directa, NO recorrido vial ni garantía de acceso.
--- No hay datos de camas, pacientes, especialidades ni operatividad real.
+-- Los 2 km son un supuesto del ejercicio, NO una inundación observada ni un
+-- mapa oficial de riesgo. Consideramos los cursos y lagunas que tocan Concordia;
+-- usamos su forma completa para medir cercanía, sin cortarla en el límite.
+-- Medimos distancia directa, no un recorrido por calles. No conocemos camas,
+-- pacientes, especialidades ni si los centros realmente están funcionando.
 --
--- Decisión académica: coordinar los receptores que concentran más centros.
--- Si no hay receptores, señalar que el modelo no permite una derivación local
--- y estudiar apoyo externo/centro de campaña. Antes de una decisión real hay
--- que verificar inundación, operatividad, capacidad y accesos en terreno.
--- Se diferencia de 10.3: simula indisponibilidad, excluye centros expuestos y
--- AGREGA la dependencia institucional por receptor; no busca solo cercanía.
--- Referencia de unidades: https://postgis.net/docs/ST_DWithin.html
--- Ejecutar completo; no requiere actividad-7.sql ni modifica las fuentes.
+-- ¿Qué decisión ayuda a pensar? Coordinar los destinos que recibirían más
+-- centros. Si no hay destinos, estudiar apoyo externo o un hospital de campaña.
+-- Antes de decidir algo real habría que comprobar la crecida, la capacidad
+-- sanitaria y los accesos. No repetimos solo la búsqueda de cercanía de 10.3:
+-- suponemos cierres, descartamos destinos expuestos y agrupamos las derivaciones.
+--
+-- Son dos consultas independientes: seleccionar cada bloque WITH ... SELECT
+-- completo en pgAdmin. No crean objetos ni necesitan las consultas de actividad 7.
+-- geography mide en metros; numeric permite redondear a dos decimales.
 
-BEGIN;
-CREATE SCHEMA IF NOT EXISTS chipa_actividades;
-
--- 1. Fuentes de exposición relevantes para el departamento.
-CREATE OR REPLACE VIEW chipa_actividades.a13_agua_referencia AS
-SELECT 'rio_' || r.fid AS id, r.geom
-FROM fuentes_profe.rios AS r
-JOIN fuentes_profe.departamentos AS d ON ST_Intersects(r.geom, d.geom)
-WHERE d.nam = 'Concordia'
-  AND r.waterway IN ('river', 'stream')
-UNION ALL
-SELECT 'laguna_' || l.id AS id, l.geom
-FROM entrerios.lagunas AS l
-JOIN fuentes_profe.departamentos AS d ON ST_Intersects(l.geom, d.geom)
-WHERE d.nam = 'Concordia';
-
--- 2. Clasificar cada hospital/clínica; EXISTS evita duplicar un centro cuando
--- está cerca de varias fuentes de agua. geography expresa el umbral en metros.
-CREATE OR REPLACE VIEW chipa_actividades.a13_centros AS
-SELECT s.id,
-       coalesce(s.nombre, '(sin nombre)') AS nombre,
-       EXISTS (
-           SELECT 1
-           FROM chipa_actividades.a13_agua_referencia AS a
-           WHERE ST_DWithin(s.geom::geography, a.geom::geography, 2000)
-       ) AS expuesto,
-       s.geom
-FROM entrerios.salud AS s
-JOIN fuentes_profe.departamentos AS d ON ST_Intersects(s.geom, d.geom)
-WHERE d.nam = 'Concordia'
-  AND s.atributos->>'amenity' IN ('hospital', 'clinic');
-
--- 3. Comparar centros expuestos con receptores no expuestos. ROW_NUMBER elige
--- el más cercano; el id resuelve empates de manera reproducible.
--- LEFT JOIN conserva el origen si no hay ningún receptor disponible.
-CREATE OR REPLACE VIEW chipa_actividades.a13_derivaciones AS
-WITH alternativas AS (
-    SELECT origen.id AS id,
-           origen.nombre AS centro_origen,
-           destino.id AS receptor_id,
-           destino.nombre AS centro_receptor,
+-- CONSULTA 1. Un destino para cada centro que suponemos cerrado.
+-- EXISTS pregunta si hay agua cerca sin repetir el centro por cada río o laguna.
+-- Ordenamos los destinos por distancia y elegimos el primero con LIMIT 1.
+-- Si empatan, gana el id menor. LEFT JOIN conserva el origen si no hay destino.
+-- Resultado actual: 15 centros sin destino. geom guarda el punto de origen;
+-- geom_derivacion sería la línea directa al destino (no una ruta), o NULL si falta.
+WITH departamento AS (
+    SELECT geom
+    FROM capas.departamentos
+    WHERE nam = 'Concordia'
+), agua_referencia AS (
+    SELECT r.geom
+    FROM capas.rios AS r
+    JOIN departamento AS d ON ST_Intersects(r.geom, d.geom)
+    WHERE r.waterway IN ('river', 'stream')
+    UNION ALL
+    SELECT l.geom
+    FROM entrerios.lagunas AS l
+    JOIN departamento AS d ON ST_Intersects(l.geom, d.geom)
+), centros AS (
+    SELECT s.id, coalesce(s.nombre, '(sin nombre)') AS nombre, s.geom,
+           EXISTS (
+               SELECT 1
+               FROM agua_referencia AS a
+               WHERE ST_DWithin(s.geom::geography, a.geom::geography, 2000)
+           ) AS expuesto
+    FROM entrerios.salud AS s
+    JOIN departamento AS d ON ST_Intersects(s.geom, d.geom)
+    WHERE s.atributos->>'amenity' IN ('hospital', 'clinic')
+), derivaciones AS (
+    SELECT origen.id, origen.nombre AS centro_origen,
+           destino.id AS receptor_id, destino.nombre AS centro_receptor,
            ST_Distance(origen.geom::geography, destino.geom::geography) AS distancia_m,
-           origen.geom AS geom_origen,
-           destino.geom AS geom_destino,
-           row_number() OVER (
-               PARTITION BY origen.id
-               ORDER BY ST_Distance(origen.geom::geography, destino.geom::geography),
-                        destino.id
-           ) AS orden
-    FROM chipa_actividades.a13_centros AS origen
-    LEFT JOIN chipa_actividades.a13_centros AS destino ON NOT destino.expuesto
+           origen.geom AS geom_origen, destino.geom AS geom_destino
+    FROM centros AS origen
+    LEFT JOIN centros AS destino
+      ON destino.id = (
+          SELECT candidato.id
+          FROM centros AS candidato
+          WHERE NOT candidato.expuesto
+          ORDER BY ST_Distance(origen.geom::geography, candidato.geom::geography),
+                   candidato.id
+          LIMIT 1
+      )
     WHERE origen.expuesto
 )
 SELECT id, centro_origen, receptor_id, centro_receptor,
        round(distancia_m::numeric, 2) AS distancia_directa_m,
-       CASE WHEN receptor_id IS NULL THEN 'Sin receptor fuera de riesgo'
+       (SELECT count(*) FROM centros WHERE NOT expuesto) AS receptores_disponibles,
+       CASE WHEN receptor_id IS NULL THEN 'Sin receptor local fuera de la franja'
             ELSE 'Confirmar capacidad y acceso antes de derivar'
        END AS decision,
-       ST_MakeLine(geom_origen, geom_destino)::geometry(LineString, 4326) AS geom
-FROM alternativas
-WHERE orden = 1;
+       geom_origen AS geom,
+       ST_MakeLine(geom_origen, geom_destino) AS geom_derivacion
+FROM derivaciones
+ORDER BY distancia_m DESC NULLS FIRST, id;
 
--- 4. Resultado agregado para coordinar receptores: número de centros, NO
--- pacientes ni camas. También aparecen receptores con cero derivaciones.
-CREATE OR REPLACE VIEW chipa_actividades.a13_receptores AS
-SELECT receptor.id,
-       receptor.nombre,
+-- CONSULTA 2. Contamos cuántos centros derivarían a cada destino. No es una
+-- cantidad de pacientes ni de camas. Incluimos destinos que recibirían cero.
+-- Repetimos los primeros pasos para ejecutar esta consulta por separado.
+-- Hoy devuelve cero filas: no hay destinos fuera de la franja. No cambiamos
+-- los 2 km para forzar una respuesta ni deducimos que exista una inundación real.
+WITH departamento AS (
+    SELECT geom
+    FROM capas.departamentos
+    WHERE nam = 'Concordia'
+), agua_referencia AS (
+    SELECT r.geom
+    FROM capas.rios AS r
+    JOIN departamento AS d ON ST_Intersects(r.geom, d.geom)
+    WHERE r.waterway IN ('river', 'stream')
+    UNION ALL
+    SELECT l.geom
+    FROM entrerios.lagunas AS l
+    JOIN departamento AS d ON ST_Intersects(l.geom, d.geom)
+), centros AS (
+    SELECT s.id, coalesce(s.nombre, '(sin nombre)') AS nombre, s.geom,
+           EXISTS (
+               SELECT 1
+               FROM agua_referencia AS a
+               WHERE ST_DWithin(s.geom::geography, a.geom::geography, 2000)
+           ) AS expuesto
+    FROM entrerios.salud AS s
+    JOIN departamento AS d ON ST_Intersects(s.geom, d.geom)
+    WHERE s.atributos->>'amenity' IN ('hospital', 'clinic')
+), derivaciones AS (
+    SELECT origen.id, destino.id AS receptor_id,
+           ST_Distance(origen.geom::geography, destino.geom::geography) AS distancia_m
+    FROM centros AS origen
+    LEFT JOIN centros AS destino
+      ON destino.id = (
+          SELECT candidato.id
+          FROM centros AS candidato
+          WHERE NOT candidato.expuesto
+          ORDER BY ST_Distance(origen.geom::geography, candidato.geom::geography),
+                   candidato.id
+          LIMIT 1
+      )
+    WHERE origen.expuesto
+)
+SELECT receptor.id, receptor.nombre,
        count(d.id) AS centros_a_derivar,
-       round(max(d.distancia_directa_m) / 1000.0, 2) AS mayor_distancia_km,
+       round((max(d.distancia_m) / 1000.0)::numeric, 2) AS mayor_distancia_km,
        receptor.geom
-FROM chipa_actividades.a13_centros AS receptor
-LEFT JOIN chipa_actividades.a13_derivaciones AS d ON d.receptor_id = receptor.id
+FROM centros AS receptor
+LEFT JOIN derivaciones AS d ON d.receptor_id = receptor.id
 WHERE NOT receptor.expuesto
-GROUP BY receptor.id, receptor.nombre, receptor.geom;
-COMMIT;
+GROUP BY receptor.id, receptor.nombre, receptor.geom
+ORDER BY centros_a_derivar DESC, receptor.nombre;
 
-SELECT count(*) AS centros_evaluados,
-       count(*) FILTER (WHERE expuesto) AS cierres_hipoteticos,
-       count(*) FILTER (WHERE NOT expuesto) AS receptores_fuera_de_franja
-FROM chipa_actividades.a13_centros;
-SELECT CASE WHEN count(*) = 0
-            THEN 'Sin receptores locales bajo el criterio académico; evaluar apoyo externo'
-            ELSE 'Hay receptores candidatos; confirmar capacidad y acceso'
-       END AS conclusion_del_modelo
-FROM chipa_actividades.a13_receptores;
-SELECT id, centro_origen, centro_receptor, distancia_directa_m, decision
-FROM chipa_actividades.a13_derivaciones
-ORDER BY distancia_directa_m DESC NULLS FIRST;
-SELECT id, nombre, centros_a_derivar, mayor_distancia_km
-FROM chipa_actividades.a13_receptores
-ORDER BY centros_a_derivar DESC, nombre;
-
--- QGIS: agregar fuentes_profe.departamentos y las vistas a13_centros (puntos),
--- a13_derivaciones (líneas directas, no rutas) y a13_receptores (puntos).
--- Clave única: id. Geometría: geom. CRS: EPSG:4326.
--- Categorizar a13_centros por expuesto; graduar receptores por centros_a_derivar.
--- Sin receptor, la derivación queda en la tabla con geometría NULL: consultar
--- esos casos antes de interpretar el mapa. Cero cierres tampoco prueba seguridad.
--- Proyecto listo: abrir chipa-actividades/concordia.qgz tras ejecutar ambos SQL.
--- Usa PostgreSQL local, sin contraseña guardada: ingresar la de .env al conectar.
--- El mapa muestra Concordia, los cursos entregados y los centros evaluados.
--- La clasificación es un supuesto académico, no una emergencia observada.
+-- QGIS: ejecutar la consulta 1 en DB Manager y cargarla usando id y geom.
+-- Así se ven los 15 puntos aunque no haya destino. geom_derivacion permitiría
+-- dibujar las líneas, pero hoy son NULL. La consulta 2 vacía no indica un error.
+-- concordia.qgz usa vistas anteriores: estas consultas no las actualizan.

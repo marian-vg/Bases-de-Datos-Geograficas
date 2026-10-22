@@ -39,13 +39,13 @@ Contraseña: **`POSTGRES_PASSWORD` en `.env`**. No compartir ese archivo.
 
 - Trabajo en **`entrerios`**: columnas `id`, `nombre`, `atributos` (JSONB) y `geom`; no coinciden exactamente con el dump antiguo. Consultar atributos con `atributos->>'campo'`. Originales preservados en **`fuentes`**.
 - Las capas usan **EPSG:4326**. Para metros o superficies usar `geom::geography` o reproyectar; no calcular en grados. Control inicial: sin geometrías nulas ni inválidas.
-- `entrerios.departamentos` conserva solo Concordia y `entrerios.calles` sigue vacía. Las capas nuevas del profesor están separadas en **`fuentes_profe`**: 17 departamentos, 162 ciudades, ríos, calles y rutas. Las actividades 7/13 usan estos límites y ríos, junto a salud/lagunas de `entrerios`.
+- `entrerios.departamentos` conserva solo Concordia y `entrerios.calles` sigue vacía. Las capas nuevas del profesor están separadas en **`capas`**: 17 departamentos, 162 ciudades, ríos, calles y rutas. Las actividades 7/13 usan estos límites y ríos, junto a salud/lagunas de `entrerios`.
 - El SHP suelto de `shapes/` sigue incompleto. El conjunto completo de `Capas_Profe/` permite importar los 17 departamentos con CRS declarado y nombres originales. Algunos límites tienen micro-solapes: advertencias y diagnóstico en `actividad-7.sql`, sin repararlos automáticamente.
 - Localidades poligonales pasan a punto interior; áreas se reparan con `ST_MakeValid`. Tres líneas del export de lagunas quedan solo en `fuentes`, no se convierten en superficie. La carga no recorta al departamento.
 - **Reimportar conserva tablas existentes:** no duplica, sobrescribe ni actualiza fuentes modificadas. Para recargar, respaldar y decidir qué reemplazar. Si se interrumpe la carga, comprobar registros antes de reutilizarla.
 - Copiar `shapes/` y `Capas_Profe/` al replicar el entorno. No ejecutar ciegamente los SQL antiguos: incluyen locale Windows y recreación del esquema.
 
-Para las actividades, ejecutar `actividad-7.sql` y `actividad-13.sql` de `chipa-actividades/`; abrir luego `concordia.qgz` en QGIS. Las explicaciones y limitaciones están comentadas en los SQL.
+Las actividades `chipa-actividades/actividad-7.sql` y `actividad-13.sql` contienen **SELECT independientes**: seleccionar cada bloque completo y ejecutarlo en pgAdmin. Para QGIS, cargar el SELECT desde DB Manager. `concordia.qgz` conserva las vistas de una entrega anterior; estos SELECT no las actualizan. Explicaciones y limitaciones dentro de los SQL.
 
 ## Apagar y conservar
 
