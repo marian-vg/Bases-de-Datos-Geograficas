@@ -251,7 +251,7 @@ A partir de esta información, determinar cuántas localidades del departamento 
 
 Representar el resultado en QGIS y explicar qué podría significar esta situación desde el punto de vista de la accesibilidad sanitaria.
 
-## 9\. Gestión del riesgo hídrico \- mariano
+## 9\. Gestión del riesgo hídrico \- 
 
 En este punto la idea es combinar diferentes capas para construir una primera aproximación al riesgo asociado a la presencia de cursos y cuerpos de agua.
 
@@ -348,7 +348,7 @@ Para cada grupo:
 
 Finalmente, interpretar los centroides obtenidos como posibles ubicaciones para mejorar la distribución de ambulancias, medicamentos o futuros centros de atención.
 
-## 11\. Calles, OpenStreetMap y Argenmap \- damian
+## 11\. Calles, OpenStreetMap y Argenmap \-
 
 Incorporar las calles obtenidas desde OpenStreetMap a la base de datos como tabla:
 
