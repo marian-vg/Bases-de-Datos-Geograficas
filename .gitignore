@@ -1,6 +1,6 @@
-# Ignorar las capas
-shapes/*
 /enunciado-guia
+*.gpkg-shm
+*.gpkg-wal
 /capas
 
 # Local credentials and backups
