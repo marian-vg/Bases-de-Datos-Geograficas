@@ -3,7 +3,10 @@
 -- ACTIVIDAD 14: Ubicación para Centro de Atención Sanitaria de Emergencia
 -- Autor: Daniel / Damián
 -- Departamento de estudio: Concordia
--- Sistema Métrico: EPSG:5343 (POSGAR 07 / Argentina Faja 5)
+-- Sistema Métrico: EPSG:5343 (POSGAR 2007 / Argentina faja 1, meridiano central 72° O),
+-- el sistema que sugiere el enunciado. Entre Ríos queda lejos de ese meridiano, por lo
+-- que las superficies salen un 4 % mayores que con geography (Concordia: 3.435 contra
+-- 3.293 km²). La faja que corresponde a la provincia es la 5 (EPSG:5347).
 -- Esquema: entrerios
 -- ============================================================================
 

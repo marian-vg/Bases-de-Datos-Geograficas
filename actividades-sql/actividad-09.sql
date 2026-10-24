@@ -2,7 +2,10 @@
 -- ACTIVIDAD 9 COMPLETA
 -- Materia: Bases de Datos Avanzadas - TP2 BD Geográficas
 -- Departamento: Concordia
--- Sistema Métrico: EPSG:5343 (POSGAR 07 / Argentina 5)
+-- Sistema Métrico: EPSG:5343 (POSGAR 2007 / Argentina faja 1, meridiano central 72° O),
+-- el sistema que sugiere el enunciado. Entre Ríos queda lejos de ese meridiano, por lo
+-- que las superficies salen un 4 % mayores que con geography (Concordia: 3.435 contra
+-- 3.293 km²). La faja que corresponde a la provincia es la 5 (EPSG:5347).
 -- ============================================================================
 -- Incluye los subítems 9.1 a 9.4 y, al final, el bloque de validación.
 -- ============================================================================
@@ -12,7 +15,7 @@
 -- ACTIVIDAD 9: GESTIÓN DEL RIESGO HÍDRICO
 -- 9.1. Definición de una zona de riesgo (Departamento Concordia)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Se proyecta a POSGAR 07 Argentina 5 para realizar cálculos métricos planos sin la distorsión angular de EPSG:4326.
+-- Justificación CRS (EPSG:5343): Se proyecta a POSGAR 2007 (faja 1) para realizar cálculos métricos planos en metros, que no son posibles en los grados de EPSG:4326.
 -- Justificación Funciones: ST_Buffer genera el radio de 2.000 m; ST_Union disuelve solapamientos y ST_Intersection acota al límite de Concordia.
 -- ============================================================================
 
@@ -215,7 +218,7 @@ FROM entrerios.vw_act9_localidades_aislamiento_concordia;
 -- ACTIVIDAD 9: GESTIÓN DEL RIESGO HÍDRICO
 -- 9.4. Departamentos con mayor exposición (Alcance Provincial - Umbral 30%)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Uniformiza el cálculo de áreas geográficas en km² para los 17 departamentos sin distorsión meridiana.
+-- Justificación CRS (EPSG:5343): Uniformiza el cálculo de áreas en km² para los 17 departamentos; al usar la misma proyección, los porcentajes son comparables entre sí.
 -- Justificación Funciones: ST_Buffer genera el área de influencia de 2.000 m y ST_Intersection cuantifica la superposición con cada departamento.
 -- ============================================================================
 

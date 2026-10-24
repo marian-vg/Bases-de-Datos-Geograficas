@@ -2,7 +2,10 @@
 -- ACTIVIDAD 10 COMPLETA
 -- Materia: Bases de Datos Avanzadas - TP2 BD Geográficas
 -- Departamento: Concordia
--- Sistema Métrico: EPSG:5343 (POSGAR 07 / Argentina 5)
+-- Sistema Métrico: EPSG:5343 (POSGAR 2007 / Argentina faja 1, meridiano central 72° O),
+-- el sistema que sugiere el enunciado. Entre Ríos queda lejos de ese meridiano, por lo
+-- que las superficies salen un 4 % mayores que con geography (Concordia: 3.435 contra
+-- 3.293 km²). La faja que corresponde a la provincia es la 5 (EPSG:5347).
 -- ============================================================================
 -- Incluye los subítems 10.1 a 10.4 y, al final, el bloque de validación.
 -- ============================================================================
@@ -80,7 +83,7 @@ ORDER BY loc.name;
 -- ACTIVIDAD 10: FUNCIONES Y AUTOMATIZACIÓN MEDIANTE SQL
 -- 10.2. MBR (Minimum Bounding Rectangle) de Entre Ríos (ST_Envelope)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Permite calcular superficies comparables en km² proyectadas al plano sin deformaciones angulares.
+-- Justificación CRS (EPSG:5343): Permite calcular en km² las dos superficies con la misma proyección, por lo que su comparación es válida.
 -- Justificación Funciones: ST_Envelope genera el rectángulo mínimo delimitador y ST_Union disuelve las divisiones departamentales.
 -- ============================================================================
 
