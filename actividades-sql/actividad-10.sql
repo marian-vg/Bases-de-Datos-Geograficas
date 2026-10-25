@@ -2,10 +2,9 @@
 -- ACTIVIDAD 10 COMPLETA
 -- Materia: Bases de Datos Avanzadas - TP2 BD Geográficas
 -- Departamento: Concordia
--- Sistema Métrico: EPSG:5343 (POSGAR 2007 / Argentina faja 1, meridiano central 72° O),
--- el sistema que sugiere el enunciado. Entre Ríos queda lejos de ese meridiano, por lo
--- que las superficies salen un 4 % mayores que con geography (Concordia: 3.435 contra
--- 3.293 km²). La faja que corresponde a la provincia es la 5 (EPSG:5347).
+-- Sistema Métrico: EPSG:5347 (POSGAR 2007 / Argentina faja 5, meridiano central 60° O),
+-- la faja que corresponde a Entre Ríos. Como la provincia está cerca de ese meridiano,
+-- las distancias y superficies son prácticamente iguales a las medidas con geography.
 -- ============================================================================
 -- Incluye los subítems 10.1 a 10.4 y, al final, el bloque de validación.
 -- ============================================================================
@@ -15,7 +14,7 @@
 -- ACTIVIDAD 10: FUNCIONES Y AUTOMATIZACIÓN MEDIANTE SQL
 -- 10.1. Clasificación del riesgo de una localidad (fn_riesgo_localidad)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Proporciona unidades métricas uniformes para categorizar los umbrales de 1 km y 3 km.
+-- Justificación CRS (EPSG:5347): Proporciona unidades métricas uniformes para categorizar los umbrales de 1 km y 3 km.
 -- Justificación Funciones: ST_Distance computa la cercanía mínima al agua y ST_DWithin pre-filtra por índice GiST para optimizar la respuesta.
 -- ============================================================================
 
@@ -40,15 +39,15 @@ BEGIN
 
     -- 2. Distancia mínima en metros hacia ríos o lagunas (filtro GiST de 0.1° para rendimiento)
     WITH agua_cercana AS (
-        SELECT ST_Transform(r.geom, 5343) AS geom_5343
+        SELECT ST_Transform(r.geom, 5347) AS geom_5347
         FROM entrerios.rios r
         WHERE ST_DWithin(r.geom, v_loc_geom, 0.1)
         UNION ALL
-        SELECT ST_Transform(l.geom, 5343) AS geom_5343
+        SELECT ST_Transform(l.geom, 5347) AS geom_5347
         FROM entrerios.lagunas l
         WHERE ST_DWithin(l.geom, v_loc_geom, 0.1)
     )
-    SELECT MIN(ST_Distance(ST_Transform(v_loc_geom, 5343), geom_5343))
+    SELECT MIN(ST_Distance(ST_Transform(v_loc_geom, 5347), geom_5347))
     INTO v_min_dist
     FROM agua_cercana;
 
@@ -83,7 +82,7 @@ ORDER BY loc.name;
 -- ACTIVIDAD 10: FUNCIONES Y AUTOMATIZACIÓN MEDIANTE SQL
 -- 10.2. MBR (Minimum Bounding Rectangle) de Entre Ríos (ST_Envelope)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Permite calcular en km² las dos superficies con la misma proyección, por lo que su comparación es válida.
+-- Justificación CRS (EPSG:5347): Permite calcular en km² las dos superficies con la misma proyección, por lo que su comparación es válida.
 -- Justificación Funciones: ST_Envelope genera el rectángulo mínimo delimitador y ST_Union disuelve las divisiones departamentales.
 -- ============================================================================
 
@@ -93,35 +92,35 @@ SET search_path TO entrerios, public;
 CREATE OR REPLACE VIEW entrerios.vw_act10_mbr_entre_rios AS
 WITH 
 provincia AS (
-    SELECT ST_Union(ST_Transform(geom, 5343)) AS geom_provincia_5343
+    SELECT ST_Union(ST_Transform(geom, 5347)) AS geom_provincia_5347
     FROM entrerios.departamentos
 ),
 geometrias AS (
-    SELECT geom_provincia_5343, ST_Envelope(geom_provincia_5343) AS geom_mbr_5343 FROM provincia
+    SELECT geom_provincia_5347, ST_Envelope(geom_provincia_5347) AS geom_mbr_5347 FROM provincia
 )
 SELECT 
     1 AS id,
     'Territorio Real Provincial'::text AS capa,
-    ROUND((ST_Area(geom_provincia_5343) / 1000000.0)::numeric, 2) AS superficie_km2,
-    ST_Transform(geom_provincia_5343, 4326) AS geom
+    ROUND((ST_Area(geom_provincia_5347) / 1000000.0)::numeric, 2) AS superficie_km2,
+    ST_Transform(geom_provincia_5347, 4326) AS geom
 FROM geometrias
 UNION ALL
 SELECT 
     2 AS id,
     'MBR (ST_Envelope) Provincial'::text AS capa,
-    ROUND((ST_Area(geom_mbr_5343) / 1000000.0)::numeric, 2) AS superficie_km2,
-    ST_Transform(geom_mbr_5343, 4326) AS geom
+    ROUND((ST_Area(geom_mbr_5347) / 1000000.0)::numeric, 2) AS superficie_km2,
+    ST_Transform(geom_mbr_5347, 4326) AS geom
 FROM geometrias;
 
 -- Consulta comparativa de superficies y ratio de ocupación
 WITH 
 provincia AS (
-    SELECT ST_Union(ST_Transform(geom, 5343)) AS geom_5343 FROM entrerios.departamentos
+    SELECT ST_Union(ST_Transform(geom, 5347)) AS geom_5347 FROM entrerios.departamentos
 ),
 areas AS (
     SELECT 
-        ST_Area(geom_5343) / 1000000.0 AS area_real_km2,
-        ST_Area(ST_Envelope(geom_5343)) / 1000000.0 AS area_mbr_km2
+        ST_Area(geom_5347) / 1000000.0 AS area_real_km2,
+        ST_Area(ST_Envelope(geom_5347)) / 1000000.0 AS area_mbr_km2
     FROM provincia
 )
 SELECT 
@@ -139,7 +138,7 @@ FROM areas;
 -- ACTIVIDAD 10: FUNCIONES Y AUTOMATIZACIÓN MEDIANTE SQL
 -- 10.3. Búsqueda del hospital más cercano (fn_hospital_cercano)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Permite calcular la distancia euclidiana exacta en metros entre la persona y el efector de salud.
+-- Justificación CRS (EPSG:5347): Permite calcular la distancia euclidiana exacta en metros entre la persona y el efector de salud.
 -- Justificación Funciones: ST_MakePoint construye el punto geográfico y el operador <-> acelera la vecindad más próxima mediante el índice GiST.
 -- ============================================================================
 
@@ -158,7 +157,7 @@ RETURNS TABLE (
 ) AS $$
 DECLARE
     v_punto_4326 geometry;
-    v_punto_5343 geometry;
+    v_punto_5347 geometry;
 BEGIN
     IF p_lat IS NULL OR p_lon IS NULL THEN
         RAISE EXCEPTION 'Latitud y longitud son obligatorias.';
@@ -166,25 +165,25 @@ BEGIN
 
     -- Longitud = eje X, Latitud = eje Y en PostGIS
     v_punto_4326 := ST_SetSRID(ST_MakePoint(p_lon, p_lat), 4326);
-    v_punto_5343 := ST_Transform(v_punto_4326, 5343);
+    v_punto_5347 := ST_Transform(v_punto_4326, 5347);
 
     RETURN QUERY
     WITH candidatos AS (
         SELECT 
             COALESCE(s.name, 'Establecimiento sin nombre formal') AS nombre,
             COALESCE(s.amenity, s.healthcare, 'Centro de Atención')::varchar AS tipo,
-            ST_Transform(s.geom, 5343) AS geom_5343
+            ST_Transform(s.geom, 5347) AS geom_5347
         FROM entrerios.salud s
         ORDER BY s.geom <-> v_punto_4326
         LIMIT 10
     )
     SELECT 
         c.nombre::varchar,
-        ROUND((ST_Distance(c.geom_5343, v_punto_5343))::numeric, 2),
-        ROUND((ST_Distance(c.geom_5343, v_punto_5343) / 1000.0)::numeric, 3),
+        ROUND((ST_Distance(c.geom_5347, v_punto_5347))::numeric, 2),
+        ROUND((ST_Distance(c.geom_5347, v_punto_5347) / 1000.0)::numeric, 3),
         c.tipo
     FROM candidatos c
-    ORDER BY ST_Distance(c.geom_5343, v_punto_5343) ASC
+    ORDER BY ST_Distance(c.geom_5347, v_punto_5347) ASC
     LIMIT 1;
 END;
 $$ LANGUAGE plpgsql STABLE;
@@ -206,7 +205,7 @@ SELECT 'Acceso Autovía RN14 y RP22' AS escenario, h.* FROM entrerios.fn_hospita
 -- ACTIVIDAD 10: FUNCIONES Y AUTOMATIZACIÓN MEDIANTE SQL
 -- 10.4. Agrupamiento de establecimientos sanitarios (ST_ClusterKMeans)
 -- ============================================================================
--- Justificación CRS (EPSG:5343): Asegura distancias ortogonales en el espacio métrico euclidiano para la convergencia del algoritmo K-Means.
+-- Justificación CRS (EPSG:5347): Asegura distancias ortogonales en el espacio métrico euclidiano para la convergencia del algoritmo K-Means.
 -- Justificación Funciones: ST_ClusterKMeans particiona en k=3 grupos y ST_Centroid calcula el baricentro geométrico óptimo de cobertura.
 -- ============================================================================
 
@@ -224,7 +223,7 @@ salud_concordia AS (
         COALESCE(s.name, 'Establecimiento sin nombre') AS nombre,
         COALESCE(s.amenity, s.healthcare, 'Salud') AS tipo,
         s.geom AS geom_4326,
-        ST_Transform(s.geom, 5343) AS geom_5343
+        ST_Transform(s.geom, 5347) AS geom_5347
     FROM entrerios.salud s, concordia c
     WHERE ST_Intersects(s.geom, c.geom)
 )
@@ -232,7 +231,7 @@ SELECT
     sc.id,
     sc.nombre,
     sc.tipo,
-    (ST_ClusterKMeans(sc.geom_5343, 3) OVER ()) + 1 AS grupo_cluster_id,
+    (ST_ClusterKMeans(sc.geom_5347, 3) OVER ()) + 1 AS grupo_cluster_id,
     sc.geom_4326 AS geom
 FROM salud_concordia sc;
 
@@ -244,8 +243,8 @@ grupos AS (
         grupo_cluster_id,
         COUNT(*) AS total_efectores,
         string_agg(nombre, ' | ' ORDER BY nombre) AS integrantes,
-        ST_Centroid(ST_Collect(ST_Transform(geom, 5343))) AS geom_centroide_5343,
-        ST_ConvexHull(ST_Collect(ST_Transform(geom, 5343))) AS geom_hull_5343
+        ST_Centroid(ST_Collect(ST_Transform(geom, 5347))) AS geom_centroide_5347,
+        ST_ConvexHull(ST_Collect(ST_Transform(geom, 5347))) AS geom_hull_5347
     FROM entrerios.vw_act10_clusters_salud_concordia
     GROUP BY grupo_cluster_id
 )
@@ -253,11 +252,11 @@ SELECT
     grupo_cluster_id,
     'Grupo #' || grupo_cluster_id AS identificador_cluster,
     total_efectores,
-    ROUND(ST_Y(ST_Transform(geom_centroide_5343, 4326))::numeric, 5) AS latitud_centroide,
-    ROUND(ST_X(ST_Transform(geom_centroide_5343, 4326))::numeric, 5) AS longitud_centroide,
+    ROUND(ST_Y(ST_Transform(geom_centroide_5347, 4326))::numeric, 5) AS latitud_centroide,
+    ROUND(ST_X(ST_Transform(geom_centroide_5347, 4326))::numeric, 5) AS longitud_centroide,
     integrantes,
-    ST_Transform(geom_centroide_5343, 4326) AS geom_centroide,
-    ST_Transform(geom_hull_5343, 4326) AS geom_cobertura
+    ST_Transform(geom_centroide_5347, 4326) AS geom_centroide,
+    ST_Transform(geom_hull_5347, 4326) AS geom_cobertura
 FROM grupos
 ORDER BY grupo_cluster_id;
 

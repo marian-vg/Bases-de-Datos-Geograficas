@@ -7,3 +7,4 @@
 .env
 backups/
 .atl/
+__pycache__/

@@ -3,17 +3,16 @@
 -- ACTIVIDAD 14: Ubicación para Centro de Atención Sanitaria de Emergencia
 -- Autor: Daniel / Damián
 -- Departamento de estudio: Concordia
--- Sistema Métrico: EPSG:5343 (POSGAR 2007 / Argentina faja 1, meridiano central 72° O),
--- el sistema que sugiere el enunciado. Entre Ríos queda lejos de ese meridiano, por lo
--- que las superficies salen un 4 % mayores que con geography (Concordia: 3.435 contra
--- 3.293 km²). La faja que corresponde a la provincia es la 5 (EPSG:5347).
+-- Sistema Métrico: EPSG:5347 (POSGAR 2007 / Argentina faja 5, meridiano central 60° O),
+-- la faja que corresponde a Entre Ríos. Como la provincia está cerca de ese meridiano,
+-- las distancias y superficies son prácticamente iguales a las medidas con geography.
 -- Esquema: entrerios
 -- ============================================================================
 
 WITH 
--- 1. Polígono de Concordia reproyectado a EPSG:5343 (IGN)
+-- 1. Polígono de Concordia reproyectado a EPSG:5347 (IGN)
 departamento AS (
-    SELECT id, nam AS nombre, geom AS geom_4326, ST_Transform(geom, 5343) AS geom_5343
+    SELECT id, nam AS nombre, geom AS geom_4326, ST_Transform(geom, 5347) AS geom_5347
     FROM entrerios.departamentos
     WHERE nam = 'Concordia'
     LIMIT 1
@@ -21,7 +20,7 @@ departamento AS (
 
 -- 2. Efectores de salud reales (hospitales y clínicas en Concordia, excluyendo laboratorios/kinesiología)
 salud_efectiva AS (
-    SELECT s.id AS id, COALESCE(s.name, '(sin nombre)') AS nombre, ST_Transform(s.geom, 5343) AS geom_5343
+    SELECT s.id AS id, COALESCE(s.name, '(sin nombre)') AS nombre, ST_Transform(s.geom, 5347) AS geom_5347
     FROM entrerios.salud s
     JOIN departamento d ON ST_Intersects(s.geom, d.geom_4326)
     WHERE s.amenity IN ('hospital', 'clinic')
@@ -30,18 +29,18 @@ salud_efectiva AS (
 
 -- 3. Localidades de Concordia con menor accesibilidad sanitaria (> 5 km de un hospital/clínica según criterio Punto 8.5)
 localidades_desatendidas AS (
-    SELECT l.id AS id, COALESCE(l.name, '(sin nombre)') AS nombre, ST_Transform(l.geom, 5343) AS geom_5343
+    SELECT l.id AS id, COALESCE(l.name, '(sin nombre)') AS nombre, ST_Transform(l.geom, 5347) AS geom_5347
     FROM entrerios.localidades l
     JOIN departamento d ON ST_Intersects(l.geom, d.geom_4326)
     WHERE NOT EXISTS (
         SELECT 1 FROM salud_efectiva s
-        WHERE ST_DWithin(ST_Transform(l.geom, 5343), s.geom_5343, 5000)
+        WHERE ST_DWithin(ST_Transform(l.geom, 5347), s.geom_5347, 5000)
     )
 ),
 
 -- 4. Corredor de accesibilidad vial: Buffer de 1.000 m sobre rutas principales (motorway, trunk, primary, secondary)
 corredor_vial AS (
-    SELECT ST_Union(ST_Buffer(ST_Intersection(ST_Transform(r.geom, 5343), d.geom_5343), 1000, 'quad_segs=4')) AS geom_5343
+    SELECT ST_Union(ST_Buffer(ST_Intersection(ST_Transform(r.geom, 5347), d.geom_5347), 1000, 'quad_segs=4')) AS geom_5347
     FROM entrerios.rutas r
     JOIN departamento d ON ST_Intersects(r.geom, d.geom_4326)
     WHERE r.highway IN ('motorway', 'trunk', 'primary', 'secondary')
@@ -51,14 +50,14 @@ corredor_vial AS (
 -- Nota de optimización espacial: ST_SimplifyPreserveTopology con 20m preserva la silueta física a escala 1:100.000
 -- reduciendo vértices masivos del embalse Salto Grande / Río Uruguay y acelerando el cómputo topológico.
 zona_exclusion_hidrica AS (
-    SELECT ST_Union(geom_buf) AS geom_5343
+    SELECT ST_Union(geom_buf) AS geom_5347
     FROM (
-        SELECT ST_Buffer(ST_SimplifyPreserveTopology(ST_Intersection(ST_Transform(ri.geom, 5343), d.geom_5343), 20), 2000, 'quad_segs=4') AS geom_buf
+        SELECT ST_Buffer(ST_SimplifyPreserveTopology(ST_Intersection(ST_Transform(ri.geom, 5347), d.geom_5347), 20), 2000, 'quad_segs=4') AS geom_buf
         FROM entrerios.rios ri
         JOIN departamento d ON ST_Intersects(ri.geom, d.geom_4326)
         WHERE ri.waterway IN ('river', 'stream')
         UNION ALL
-        SELECT ST_Buffer(ST_SimplifyPreserveTopology(ST_Intersection(ST_Transform(la.geom, 5343), d.geom_5343), 20), 2000, 'quad_segs=4') AS geom_buf
+        SELECT ST_Buffer(ST_SimplifyPreserveTopology(ST_Intersection(ST_Transform(la.geom, 5347), d.geom_5347), 20), 2000, 'quad_segs=4') AS geom_buf
         FROM entrerios.lagunas la
         JOIN departamento d ON ST_Intersects(la.geom, d.geom_4326)
     ) sub
@@ -70,7 +69,7 @@ suelo_apto AS (
         s.id AS suelo_id,
         COALESCE(s.nombre, s.pais_nomb, 'Unidad de suelo') AS unidad_suelo,
         COALESCE(s.ipc, 0) AS ipc,
-        ST_Intersection(ST_Transform(s.geom, 5343), d.geom_5343) AS geom_5343
+        ST_Intersection(ST_Transform(s.geom, 5347), d.geom_5347) AS geom_5347
     FROM entrerios.suelo s
     JOIN departamento d ON ST_Intersects(s.geom, d.geom_4326)
     WHERE COALESCE(s.ipc, 0) <= 55
@@ -85,13 +84,13 @@ poligonos_candidatos AS (
         (ST_Dump(
             ST_CollectionExtract(
                 ST_Difference(
-                    ST_Intersection(sa.geom_5343, cv.geom_5343),
-                    COALESCE(zh.geom_5343, 'POLYGON EMPTY'::geometry)
+                    ST_Intersection(sa.geom_5347, cv.geom_5347),
+                    COALESCE(zh.geom_5347, 'POLYGON EMPTY'::geometry)
                 ), 3
             )
-        )).geom AS geom_5343
+        )).geom AS geom_5347
     FROM suelo_apto sa
-    JOIN corredor_vial cv ON ST_Intersects(sa.geom_5343, cv.geom_5343)
+    JOIN corredor_vial cv ON ST_Intersects(sa.geom_5347, cv.geom_5347)
     CROSS JOIN zona_exclusion_hidrica zh
 ),
 
@@ -102,16 +101,16 @@ ranking_candidatos AS (
         p.suelo_id,
         p.unidad_suelo,
         p.ipc,
-        ROUND((ST_Area(p.geom_5343) / 10000.0)::numeric, 2) AS superficie_ha,
+        ROUND((ST_Area(p.geom_5347) / 10000.0)::numeric, 2) AS superficie_ha,
         COUNT(ld.id) AS localidades_vulnerables_cubiertas,
         COALESCE(STRING_AGG(ld.nombre, ', ' ORDER BY ld.nombre), 'Ninguna en <15km') AS detalle_localidades,
-        ROUND((AVG(ST_Distance(p.geom_5343, ld.geom_5343)) / 1000.0)::numeric, 2) AS dist_media_localidades_km,
-        p.geom_5343
+        ROUND((AVG(ST_Distance(p.geom_5347, ld.geom_5347)) / 1000.0)::numeric, 2) AS dist_media_localidades_km,
+        p.geom_5347
     FROM poligonos_candidatos p
-    LEFT JOIN localidades_desatendidas ld ON ST_DWithin(p.geom_5343, ld.geom_5343, 15000)
-    WHERE NOT ST_IsEmpty(p.geom_5343)
-      AND ST_Area(p.geom_5343) >= 50000 -- Mínimo 5 hectáreas
-    GROUP BY p.suelo_id, p.unidad_suelo, p.ipc, p.geom_5343
+    LEFT JOIN localidades_desatendidas ld ON ST_DWithin(p.geom_5347, ld.geom_5347, 15000)
+    WHERE NOT ST_IsEmpty(p.geom_5347)
+      AND ST_Area(p.geom_5347) >= 50000 -- Mínimo 5 hectáreas
+    GROUP BY p.suelo_id, p.unidad_suelo, p.ipc, p.geom_5347
 )
 
 -- 9. Selección de los 5 mejores sitios candidatos con su polígono y coordenada de emplazamiento puntual
@@ -126,10 +125,10 @@ SELECT
     localidades_vulnerables_cubiertas,
     detalle_localidades,
     dist_media_localidades_km,
-    ROUND(ST_Y(ST_Transform(ST_PointOnSurface(geom_5343), 4326))::numeric, 5) AS latitud_sugerida,
-    ROUND(ST_X(ST_Transform(ST_PointOnSurface(geom_5343), 4326))::numeric, 5) AS longitud_sugerida,
-    ST_Multi(ST_Transform(geom_5343, 4326))::geometry(MultiPolygon, 4326) AS geom_poligono,
-    ST_Transform(ST_PointOnSurface(geom_5343), 4326)::geometry(Point, 4326) AS geom_punto
+    ROUND(ST_Y(ST_Transform(ST_PointOnSurface(geom_5347), 4326))::numeric, 5) AS latitud_sugerida,
+    ROUND(ST_X(ST_Transform(ST_PointOnSurface(geom_5347), 4326))::numeric, 5) AS longitud_sugerida,
+    ST_Multi(ST_Transform(geom_5347, 4326))::geometry(MultiPolygon, 4326) AS geom_poligono,
+    ST_Transform(ST_PointOnSurface(geom_5347), 4326)::geometry(Point, 4326) AS geom_punto
 FROM ranking_candidatos
 ORDER BY puesto
 LIMIT 5;

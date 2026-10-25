@@ -32,7 +32,7 @@ app.initQgis()
 project = QgsProject.instance()
 project.setFileName(str(OUT / 'actividad-14-composicion.qgz'))
 project.setFilePathStorage(Qgis.FilePathType.Relative)
-crs = QgsCoordinateReferenceSystem('EPSG:5343')
+crs = QgsCoordinateReferenceSystem('EPSG:5347')
 project.setCrs(crs)
 
 # 1. Resultados: cada capa sale de una consulta sobre el esquema entrerios.

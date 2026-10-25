@@ -24,8 +24,8 @@ mapas.categorias(mbr, 'capa', {
 # Draw the rectangle on top of the province so its outline is visible.
 mbr.renderer().setOrderByEnabled(True)
 mbr.renderer().setOrderBy(mapas.QgsFeatureRequest.OrderBy([mapas.QgsFeatureRequest.OrderByClause('id', True)]))
-# The MBR was computed in EPSG:5343: drawn in that same system it is an upright rectangle.
-posgar = mapas.QgsCoordinateReferenceSystem('EPSG:5343')
+# The MBR was computed in EPSG:5347: drawn in that same system it is an upright rectangle.
+posgar = mapas.QgsCoordinateReferenceSystem('EPSG:5347')
 mapas.exportar(OUT / 'actividad-10-2-mbr.png', '10.2 · Entre Ríos y su MBR',
                [mbr], mapas.extension(mbr, 1.05, posgar), alto=140, segmento=50, crs=posgar)
 
