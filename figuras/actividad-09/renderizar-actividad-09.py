@@ -49,7 +49,7 @@ mapas.linea(cortes, '194,49,48', '0.6')
 mapas.categorias(localidades, 'nivel_aislamiento', {
     'Crítico (En riesgo y corte próximo)': ('194,49,48', 'Crítico'),
     'Vulnerable (Vía de acceso amenazada)': ('230,126,34', 'Vulnerable'),
-    'Bajo (Conectividad vial asegurada)': ('34,121,75', 'Bajo'),
+    'Bajo (Sin corte próximo según este criterio)': ('34,121,75', 'Bajo'),
 })
 mapas.etiquetas(localidades, '"localidad"')
 mapas.categorias(provincia, 'clase', {

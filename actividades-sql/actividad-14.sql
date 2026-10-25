@@ -63,7 +63,10 @@ zona_exclusion_hidrica AS (
     ) sub
 ),
 
--- 6. Suelo NO agrícola (preservando tierras de alta aptitud agrícola según índice de productividad ipc <= 55)
+-- 6. Exclusión de suelos de mayor aptitud agrícola: se conservan IPC <= 55.
+-- Este criterio propio no equivale a la clasificación de la actividad 12:
+-- un suelo con IPC entre 20 y 55 sigue siendo agrícola según esa clasificación,
+-- pero no queda excluido de esta búsqueda. El IPC mide aptitud, no uso actual.
 suelo_apto AS (
     SELECT 
         s.id AS suelo_id,
@@ -94,7 +97,9 @@ poligonos_candidatos AS (
     CROSS JOIN zona_exclusion_hidrica zh
 ),
 
--- 8. Evaluación multicriterio: Superficie >= 5 ha (50.000 m2) y cobertura de localidades desatendidas en un radio de 15 km
+-- 8. Evaluación multicriterio: superficie >= 5 ha (50.000 m2) y localidades
+-- desatendidas a <= 15 km del predio. La distancia es al polígono, no al punto
+-- sugerido: el ranking identifica áreas candidatas, no emplazamientos definitivos.
 ranking_candidatos AS (
     SELECT 
         row_number() OVER () AS id_parcela,
@@ -113,7 +118,11 @@ ranking_candidatos AS (
     GROUP BY p.suelo_id, p.unidad_suelo, p.ipc, p.geom_5347
 )
 
--- 9. Selección de los 5 mejores sitios candidatos con su polígono y coordenada de emplazamiento puntual
+-- 9. Selección de los 5 mejores predios y una coordenada orientativa interior.
+-- ST_PointOnSurface no garantiza un lugar construible ni un acceso habilitado.
+-- Las aproximaciones de la zona hídrica (simplificación de 20 m y buffers de
+-- pocos segmentos) tampoco certifican que todo el predio esté fuera de la zona
+-- de la actividad 9. La implantación exige comprobación local más detallada.
 SELECT 
     row_number() OVER (
         ORDER BY localidades_vulnerables_cubiertas DESC, dist_media_localidades_km ASC, superficie_ha DESC

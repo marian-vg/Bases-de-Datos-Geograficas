@@ -198,7 +198,9 @@ SELECT 'Zona Norte (Villa Zorraquín)' AS escenario, h.* FROM entrerios.fn_hospi
 UNION ALL
 SELECT 'Acceso Autovía RN14 y RP22' AS escenario, h.* FROM entrerios.fn_hospital_cercano(-31.4280, -58.1150) h;
 
--- Interpretación: Automatiza la derivación hospitalaria inmediata de accidentados o pacientes críticos al centro asistencial con menor tiempo de acceso.
+-- Interpretación: Identifica el centro asistencial de menor distancia directa.
+-- No calcula un recorrido vial ni el tiempo de acceso; la derivación requiere
+-- comprobar accesibilidad, capacidad y operatividad del establecimiento.
 
 
 -- ============================================================================

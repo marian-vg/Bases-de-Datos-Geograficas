@@ -87,7 +87,7 @@ def cargar_capa(tabla, nombre):
 
 # Orden de dibujo (de arriba hacia abajo en leyenda/mapa)
 puntos_sugeridos = cargar_capa('emplazamientos_sugeridos', 'Emplazamientos candidatos (Top 5)')
-localidades_vuln = cargar_capa('localidades_vulnerables', 'Localidades sin cobertura (< 5 km)')
+localidades_vuln = cargar_capa('localidades_vulnerables', 'Localidades sin cobertura (> 5 km)')
 salud_existente  = cargar_capa('efectores_salud_existentes', 'Efectores de salud actuales')
 parcelas_top5    = cargar_capa('parcelas_candidatas_top5', 'Parcelas aptas seleccionadas')
 depto_concordia  = cargar_capa('limite_departamento_concordia', 'Límite departamental (Concordia)')

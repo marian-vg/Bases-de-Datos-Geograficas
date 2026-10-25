@@ -197,7 +197,7 @@ SELECT
     CASE 
         WHEN ST_Intersects(lc.geom_5347, zr.geom_5347) AND ST_DWithin(lc.geom_5347, cv.geom_cortes_5347, 3000) THEN 'Crítico (En riesgo y corte próximo)'
         WHEN ST_DWithin(lc.geom_5347, cv.geom_cortes_5347, 2000) THEN 'Vulnerable (Vía de acceso amenazada)'
-        ELSE 'Bajo (Conectividad vial asegurada)'
+        ELSE 'Bajo (Sin corte próximo según este criterio)'
     END AS nivel_aislamiento,
     lc.geom_4326 AS geom
 FROM localidades_concordia lc
@@ -210,7 +210,8 @@ ORDER BY distancia_corte_mas_cercano_m ASC;
 SELECT localidad, casco_urbano_en_riesgo, distancia_ruta_principal_m, distancia_corte_mas_cercano_m, nivel_aislamiento
 FROM entrerios.vw_act9_localidades_aislamiento_concordia;
 
--- Interpretación: Detecta poblados cuyo único acceso vial formal queda interceptado por el avance de las aguas frente a crecidas.
+-- Interpretación: Identifica localidades próximas a tramos de ruta expuestos.
+-- No modela la red vial ni demuestra un único acceso, cortes reales o aislamiento.
 
 
 -- ============================================================================
